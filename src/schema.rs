@@ -1,36 +1,36 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    friendship (id) {
+        id -> Int4,
+        user1 -> Varchar,
+        user2 -> Varchar,
+        friend_status -> Varchar,
+    }
+}
+
+diesel::table! {
     users (user_id) {
         user_id -> Varchar,
         user_name -> Varchar,
-        pass -> Varchar,
+        passwd -> Varchar,
     }
 }
 
 diesel::table! {
-    wish_item (id) {
+    wish (id) {
         id -> Int4,
-        item_name -> Varchar,
-        notes -> Text,
-        wishlist -> Varchar,
-    }
-}
-
-diesel::table! {
-    wishlists (title) {
+        wish_owner -> Varchar,
         title -> Varchar,
-        list_desc -> Text,
-        published -> Bool,
-        user_id -> Varchar,
+        descr -> Text,
+        access_level -> Varchar,
     }
 }
 
-diesel::joinable!(wish_item -> wishlists (wishlist));
-diesel::joinable!(wishlists -> users (user_id));
+diesel::joinable!(wish -> users (wish_owner));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    friendship,
     users,
-    wish_item,
-    wishlists,
+    wish,
 );

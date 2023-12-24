@@ -29,46 +29,45 @@ pub struct UserDto {
     pub pass: String,
 }
 
-
-#[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
+[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
 #[diesel(belongs_to(User))]
-#[diesel(table_name = wishlists)]
-pub struct Wishlist {
+#[diesel(table_name = wish)]
+pub struct Wish {
+    pub id: i32,
+    pub wish_owner: String,
     pub title: String,
-    pub list_desc: String,
-    pub published: bool,
-    pub user_id: String,
+    pub descr: String,
+    pub access_level: String,
 }
 
 #[derive(Queryable, Insertable, Serialize, Deserialize, Associations, FromForm)]
 #[diesel(belongs_to(User))]
-#[diesel(table_name = wishlists)]
-pub struct WishlistDto {
+#[diesel(table_name = wish)]
+pub struct WishDto {
+    pub wish_owner: String,
     pub title: String,
-    pub list_desc: String,
-    pub published: bool,
-    pub user_id: String,
+    pub descr: String,
+    pub access_level: String,
 }
 
 [derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
-#[diesel(belongs_to(Wishlist))]
-#[diesel(table_name = wish_item)]
-pub struct WishItem {
+#[diesel(belongs_to(User))]
+#[diesel(table_name = friendship)]
+pub struct Friendship {
     pub id: i32,
-    pub item_name: String,
-    pub notes: String,
-    pub wishlist: String,
+    pub user1: String,
+    pub user2: String,
+    pub status: String,
 }
 
 #[derive(Queryable, Insertable, Serialize, Deserialize, Associations, FromForm)]
-#[diesel(belongs_to(Wishlist))]
-#[diesel(table_name = wish_item)]
-pub struct WishItemDto {
-    pub item_name: String,
-    pub notes: String,
-    pub wishlist: String,
+#[diesel(belongs_to(User))]
+#[diesel(table_name = friendship)]
+pub struct FriendshipDto {
+    pub user1: String,
+    pub user2: String,
+    pub status: String,
 }
-
 
 pub struct UserSession{
     pub usr_token: String,

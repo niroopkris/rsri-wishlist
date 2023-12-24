@@ -2,5 +2,5 @@
 CREATE TABLE users (
   user_id VARCHAR NOT NULL PRIMARY KEY,
   user_name VARCHAR NOT NULL,
-  pass VARCHAR NOT NULL
+  passwd VARCHAR NOT NULL
 );
