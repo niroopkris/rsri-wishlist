@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>To-Do Posts</title>
+    <head>
+        <style>
+            table {
+                border-collapse: collapse;
+                width: 100%;
+            }
+
+            th, td {
+                text-align: left;
+                padding: 8px;
+            }
+
+            tr:nth-child(even){background-color: #f2f2f2}
+
+            th {
+                background-color: #3a62cf;
+                color: white;
+            }
+        </style>
+        <meta charset="utf-8">
+    </head>
+</head>
+<body>
+    <form action="/create_wish" method="post">
+        <input type="text" name="title" placeholder="Enter a title"/>
+        <input type="text" name="body" placeholder="Enter body text"/>
+        <input type="hidden" name="user_id" id="user_id" value = "${user_id}"/>
+        <select name="category">
+            <option value="home">home</option>
+            <option value="work">work</option>
+        </select>
+        <input type="submit" value="Create todo">
+    </form>
+    <section id="todos">
+        <h1>Your To-Do List</h1>
+        <form action="/" method="get" id="categoryForm">
+            <p>Select a category</p>
+            <select name="categorySelect" id="categorySelect">
+                <option value="all">all</option>
+                <option value="home">home</option>
+                <option value="work">work</option>
+            </select>
+            <input type="submit" value="filter">
+        </form>
+        <script>
+            document.getElementById("categoryForm").onsubmit = (event) => {
+                event.preventDefault()
+
+                let category = document.getElementById("categorySelect").value;
+
+                if (category == "all") {
+                    window.location.href = "/"
+                } else {
+                    window.location.href = `/${category}`
+                }
+
+                console.log("running")
+            }
+        </script>
+        <ul>
+        <table>
+           <tr><th>Title</th><th>Body</th><th>Category</th></tr> 
+                {{#each posts}}
+
+                <div id="todo">
+                    <tr>
+                    <td>{{ this.title }}</td>
+                    <td>{{ this.body }}</td>
+                    <td>{{ this.user_id }}</td>
+                    <form action="/delete/{{this.id}}" method="post">
+                       <td> <button type="submit">delete</button></td>
+                    </form>
+                    <form action="/update/{{this.id}}" method="post">
+                        <td> <button type="submit">update</button></td>
+                    </form>
+                    </tr>
+                </div>
+                {{else}}
+                <p> No posts yet</p>
+                {{/each}}
+            </table>
+        </ul>
+
+    </section>
+</body>
+</html>

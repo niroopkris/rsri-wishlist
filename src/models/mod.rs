@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::schema::{users, posts};
+use crate::schema::{users, wish};
 
 use diesel::prelude::*;
 use serde::{Serialize, Deserialize};
@@ -18,7 +18,7 @@ use rocket::http::Cookie;
 pub struct User {
     pub user_id: String,
     pub user_name: String,
-    pub pass: String,
+    pub passwd: String,
 }
 
 #[derive(Queryable, Insertable, Serialize, Deserialize, FromForm)]
@@ -26,11 +26,11 @@ pub struct User {
 pub struct UserDto {
     pub user_id: String,
     pub user_name: String,
-    pub pass: String,
+    pub passwd: String,
 }
 
-[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
-#[diesel(belongs_to(User))]
+#[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
+#[diesel(belongs_to(User, foreign_key = wish_owner))]
 #[diesel(table_name = wish)]
 pub struct Wish {
     pub id: i32,
@@ -41,7 +41,7 @@ pub struct Wish {
 }
 
 #[derive(Queryable, Insertable, Serialize, Deserialize, Associations, FromForm)]
-#[diesel(belongs_to(User))]
+#[diesel(belongs_to(User, foreign_key = wish_owner))]
 #[diesel(table_name = wish)]
 pub struct WishDto {
     pub wish_owner: String,
@@ -50,8 +50,9 @@ pub struct WishDto {
     pub access_level: String,
 }
 
-[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
-#[diesel(belongs_to(User))]
+/* 
+#[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
+#[diesel(belongs_to(User, foreign_key = user1))]
 #[diesel(table_name = friendship)]
 pub struct Friendship {
     pub id: i32,
@@ -61,13 +62,14 @@ pub struct Friendship {
 }
 
 #[derive(Queryable, Insertable, Serialize, Deserialize, Associations, FromForm)]
-#[diesel(belongs_to(User))]
+#[diesel(belongs_to(User, foreign_key = user1))]
 #[diesel(table_name = friendship)]
 pub struct FriendshipDto {
     pub user1: String,
     pub user2: String,
     pub status: String,
 }
+*/
 
 pub struct UserSession{
     pub usr_token: String,
@@ -93,3 +95,4 @@ impl<'r> FromRequest<'r> for UserSession {
         }
     }
 }
+
