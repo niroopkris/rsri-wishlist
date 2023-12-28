@@ -11,10 +11,10 @@
     <h1>User Login</h1>
     <form method="post">
         <div> <label for="user_id">Enter user-id: </label><input type="text" name="user_id" placeholder="Enter a user_id"/> </div>
-        <div> <label for="user_name">Enter your name: <input type="text" name="user_name" placeholder="Enter your name"/> </div>
-        <div> <label for="pass">Enter password: <input type="password" name="pass" placeholder="Enter a password"/> </div>
+        <div> <label for="user_name">Enter your name: </label><input type="text" name="user_name" placeholder="Enter your name"/> </div>
+        <div> <label for="passwd">Enter password: </label><input type="text"  id ="passwd" name="passwd" placeholder="Enter a password"/> </div>
         <span>
-            <input type="submit" formaction="/register" value="Not Registered? Sign-up">
+            <input type="submit" formaction="/create_user" value="Not Registered? Sign-up">
             <input type="submit" formaction="/login" value="Login">
         </span>
     </form>

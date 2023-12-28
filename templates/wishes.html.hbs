@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>To-Do Posts</title>
+    <title>Wishlist</title>
     <head>
         <style>
             table {
@@ -30,51 +30,27 @@
 </head>
 <body>
     <form action="/create_wish" method="post">
-        <input type="text" name="title" placeholder="Enter a title"/>
-        <input type="text" name="body" placeholder="Enter body text"/>
-        <input type="hidden" name="user_id" id="user_id" value = "${user_id}"/>
-        <select name="category">
-            <option value="home">home</option>
-            <option value="work">work</option>
+        <input type="text" name="title" placeholder="Enter a wish title"/>
+        <input type="text" name="descr" placeholder="Enter a description"/>
+        <input type="hidden" name="wish_owner" id="wish_owner" value = "${wish_owner}"/>
+        <select name="access_level">
+            <option value="public">public</option>
+            <option value="friends">friends</option>
         </select>
-        <input type="submit" value="Create todo">
+        <input type="submit" value="Create wish">
     </form>
-    <section id="todos">
-        <h1>Your To-Do List</h1>
-        <form action="/" method="get" id="categoryForm">
-            <p>Select a category</p>
-            <select name="categorySelect" id="categorySelect">
-                <option value="all">all</option>
-                <option value="home">home</option>
-                <option value="work">work</option>
-            </select>
-            <input type="submit" value="filter">
-        </form>
-        <script>
-            document.getElementById("categoryForm").onsubmit = (event) => {
-                event.preventDefault()
-
-                let category = document.getElementById("categorySelect").value;
-
-                if (category == "all") {
-                    window.location.href = "/"
-                } else {
-                    window.location.href = `/${category}`
-                }
-
-                console.log("running")
-            }
-        </script>
+    <section id="wishes">
+        <h1>Your Wishlist</h1>
         <ul>
         <table>
-           <tr><th>Title</th><th>Body</th><th>Category</th></tr> 
-                {{#each posts}}
+           <tr><th>Title</th><th>Description</th><th>Access Level</th><th>Delete</th><th>Edit</th></tr> 
+                {{#each wishes}}
 
                 <div id="todo">
                     <tr>
                     <td>{{ this.title }}</td>
-                    <td>{{ this.body }}</td>
-                    <td>{{ this.user_id }}</td>
+                    <td>{{ this.descr }}</td>
+                    <td>{{ this.access_level }}</td>
                     <form action="/delete/{{this.id}}" method="post">
                        <td> <button type="submit">delete</button></td>
                     </form>

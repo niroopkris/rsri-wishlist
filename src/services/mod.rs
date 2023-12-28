@@ -42,14 +42,13 @@ pub fn portal() -> Template {
 }
 
 //create User 
-#[post("/register", format = "form", data = "<user>")]
+#[post("/create_user", format = "form", data = "<user>")]
 pub fn create_user(jar: &CookieJar<'_>, user: Form<UserDto>) -> Template {
     //create a new user and add it to the database. 
     //once they register, we need the user_id to be stored in the user session somewhere so we can get it anytime
     use self::schema::users::dsl::*;
     use crate::models::UserDto;
     let connection = &mut establish_connection_pg();
-
 
     let new_user = UserDto {
         user_id: user.user_id.to_string(),
@@ -66,7 +65,7 @@ pub fn create_user(jar: &CookieJar<'_>, user: Form<UserDto>) -> Template {
     println!("Your user_id: {}", session_usr_id);
     jar.add(("user_id", session_usr_id.clone()));
 
-    Template::render("wishes", context! {})
+    Template::render("wishes",  context!{})
 }
 
 #[post("/login", data = "<user>")]
@@ -119,6 +118,62 @@ pub fn create_wish(a_wish: Form<WishDto>, usrSession: UserSession) -> Template {
         .load::<Wish>(connection)
         .expect("Error loading posts");
     
+    
+
     Template::render("wishes", context! {wishes: &results})
    // list();
 }
+
+#[get("/")]
+pub fn get_all_wishes(usrSession: UserSession) -> Template {
+    use self::models::Wish;
+    use self::schema::wish::wish_owner; 
+
+    let connection = &mut establish_connection_pg();
+
+    let usr_token = &usrSession.usr_token;
+
+    let results = self::schema::wish::dsl::wish
+        .filter(wish_owner.eq(usr_token))
+        .load::<Wish>(connection)
+        .expect("Error loading posts");
+    Template::render("wishes", context! {wishes: &results})
+}
+
+/* 
+#[post("/delete")]
+pub fn delete(usrSession: UserSession) -> Template{
+    use self::models::Wish;
+    //use self::schema::wish::wish_owner; 
+    use self::schema::wish::dsl::*;
+
+    let connection = &mut establish_connection_pg();
+
+    let usr_token = &usrSession.usr_token;
+
+    let deleted = diesel::delete(wish.filter(wish_owner.eq(usr_token)))
+        .execute(connection)
+        .expect("Error deleting posts");
+
+    let results = self::schema::wish::dsl::wish
+        .filter(wish_owner.eq(usr_token))
+        .load::<Wish>(connection)
+        .expect("Error loading posts");
+    Template::render("wishes", context! {wishes: &results})
+}
+*/
+/* 
+#[post("/update")]
+pub fn update(my_id: i32) -> Result<Status, Custom<Json<String>>> {
+    use self::schema::posts::dsl::*;
+    let connection = &mut establish_connection_pg();
+
+    //diesel::update(posts)
+    //.filter(id.eq(my_id))
+    //.execute(connection)
+    //.expect("Error updating posts");
+
+
+    Ok(Status::NoContent)
+}
+*/
