@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::schema::{users, wish};
+use crate::schema::{users, wish, friendship};
 
 use diesel::prelude::*;
 use serde::{Serialize, Deserialize};
@@ -50,26 +50,24 @@ pub struct WishDto {
     pub access_level: String,
 }
 
-/* 
-#[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
-#[diesel(belongs_to(User, foreign_key = user1))]
+
+#[derive(Queryable, Insertable, Serialize, Deserialize, FromForm)]
 #[diesel(table_name = friendship)]
 pub struct Friendship {
     pub id: i32,
     pub user1: String,
     pub user2: String,
-    pub status: String,
+    pub friend_status: String,
 }
 
-#[derive(Queryable, Insertable, Serialize, Deserialize, Associations, FromForm)]
-#[diesel(belongs_to(User, foreign_key = user1))]
+#[derive(Queryable, Insertable, Serialize, Deserialize, FromForm)]
 #[diesel(table_name = friendship)]
 pub struct FriendshipDto {
     pub user1: String,
     pub user2: String,
-    pub status: String,
+    pub friend_status: String,
 }
-*/
+
 
 pub struct UserSession{
     pub usr_token: String,

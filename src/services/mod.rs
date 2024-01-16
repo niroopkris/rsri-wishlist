@@ -9,8 +9,10 @@ use rocket::{get, post, FromForm};
 use crate::models;
 use crate::models::UserDto; 
 use crate::models::WishDto; 
-//use crate::models::FriendshipDto; 
+use crate::models::FriendshipDto; 
 use crate::models::UserSession; 
+use crate::schema::friendship::{user1, user2, friend_status};
+use crate::schema::wish::access_level;
 
 use crate::schema;
 use rocket::http::Status;
@@ -31,13 +33,8 @@ pub fn establish_connection_pg() -> PgConnection {
 }
 
 //User home page
-#[get("/portal")]
-pub fn portal() -> Template {
-    use self::models::User;
-    //let connection = &mut establish_connection_pg();
-    //let results = self::schema::users::dsl::users
-        //.load::<User>(connection)
-        //.expect("Error loading user");
+#[get("/home")]
+pub fn home() -> Template {
     Template::render("users",  context!{})
 }
 
@@ -73,21 +70,39 @@ pub fn login(jar: &CookieJar<'_>, user: Form<UserDto>) -> Template {
     use self::models::Wish;
     use self::models::User;
     use self::schema::wish::wish_owner;
+    use self::schema::users::user_id;
+    use self::schema::users::passwd;
 
-    //add if/else: check that user exists and load posts, otherwise return userportal template
-    //let isUser = self::schema::users::dsl::users
-    //  .filter(user_id.eq(session_usr_id))
-
-    let session_usr_id = user.user_id.to_string();
-    jar.add(("user_id", session_usr_id.clone()));
-        
     let connection = &mut establish_connection_pg();
-    let results = self::schema::wish::dsl::wish
-        .filter(wish_owner.eq(session_usr_id))
-        .load::<Wish>(connection)
-        .expect("Error loading posts");
 
-    Template::render("wishes", context! {wishes: &results})
+    // checks to see if user exists 
+    let is_user = self::schema::users::dsl::users
+        .filter(user_id.eq(user.user_id.to_string()))
+        .load::<User>(connection)
+        .expect("Error loading users");
+
+    if is_user.is_empty() {
+        Template::render("users", context! {})
+    } else {
+        let session_user_id = user.user_id.to_string();
+        jar.add(("user_id", session_user_id.clone()));
+
+        println!("{}", session_user_id);
+    
+        let results = self::schema::wish::dsl::wish
+            .filter(wish_owner.eq(session_user_id))
+            .load::<Wish>(connection)
+            .expect("Error loading posts");
+    
+        Template::render("wishes", context! {wishes: &results})
+    }
+}
+
+#[post("/logout")]
+pub fn logout(jar: &CookieJar<'_>) -> Template {
+    jar.remove("user_id");
+
+    Template::render("users", context! {})
 }
 
 //CRUD functions for a User's posts
@@ -125,55 +140,175 @@ pub fn create_wish(a_wish: Form<WishDto>, usrSession: UserSession) -> Template {
 }
 
 #[get("/")]
-pub fn get_all_wishes(usrSession: UserSession) -> Template {
+pub fn get_wishes(usr_session: UserSession) -> Template {
     use self::models::Wish;
     use self::schema::wish::wish_owner; 
 
+    use self::models::Friendship;
+
+
     let connection = &mut establish_connection_pg();
 
-    let usr_token = &usrSession.usr_token;
+    let usr_token = &usr_session.usr_token;
 
-    let results = self::schema::wish::dsl::wish
-        .filter(wish_owner.eq(usr_token))
+    // retrieves vector of user's friends
+    let friendships = self::schema::friendship::dsl::friendship
+        .filter(friend_status.eq("Accepted"))
+        .filter((user1.eq(usr_token)).or(user2.eq(usr_token)))
+        .load::<Friendship>(connection)
+        .expect("Error loading friendships");
+
+    //creates vector of user's friends' ids
+    let mut friend_ids:Vec<String> = Vec::new();
+
+    for i in &friendships {
+        friend_ids.push(i.user1.to_string());
+        friend_ids.push(i.user2.to_string());
+    }
+
+    println!("{:?}", friend_ids);
+
+    let your_results = self::schema::wish::dsl::wish
+        .filter(wish_owner.eq(usr_token)) 
         .load::<Wish>(connection)
         .expect("Error loading posts");
-    Template::render("wishes", context! {wishes: &results})
+
+    //separate friend results and print them separately 
+    let other_results = self::schema::wish::dsl::wish
+        .filter(access_level.eq("public")) 
+        .or_filter((wish_owner.eq_any(friend_ids)).and(access_level.eq("friends")))
+        .load::<Wish>(connection)
+        .expect("Error loading wishes");
+    
+
+    Template::render("wishes", context! {wishes: &your_results, friend_wishes: &other_results})
 }
 
-/* 
-#[post("/delete")]
-pub fn delete(usrSession: UserSession) -> Template{
+
+#[post("/delete/<my_id>")]
+pub fn delete_wish(usr_session: UserSession, my_id: i32) -> Template{
     use self::models::Wish;
     //use self::schema::wish::wish_owner; 
     use self::schema::wish::dsl::*;
 
     let connection = &mut establish_connection_pg();
 
-    let usr_token = &usrSession.usr_token;
+    let usr_token = &usr_session.usr_token;
 
-    let deleted = diesel::delete(wish.filter(wish_owner.eq(usr_token)))
+    let deleted = diesel::delete(wish.filter(id.eq(my_id)))
         .execute(connection)
         .expect("Error deleting posts");
-
-    let results = self::schema::wish::dsl::wish
-        .filter(wish_owner.eq(usr_token))
-        .load::<Wish>(connection)
-        .expect("Error loading posts");
-    Template::render("wishes", context! {wishes: &results})
+    
+    get_wishes(usr_session)
 }
-*/
+
 /* 
-#[post("/update")]
-pub fn update(my_id: i32) -> Result<Status, Custom<Json<String>>> {
-    use self::schema::posts::dsl::*;
+#[post("/edit/<my_id>", format = "form", data = "<a_wish>")]
+pub fn edit_wish(a_wish: Form<WishDto>, usr_session: UserSession, my_id: i32) -> Template {
+    use self::schema::wish::dsl::*;
+    use crate::models::WishDto;
+    use self::models::Wish;
+
     let connection = &mut establish_connection_pg();
 
-    //diesel::update(posts)
-    //.filter(id.eq(my_id))
-    //.execute(connection)
-    //.expect("Error updating posts");
+    let usr_token = &usr_session.usr_token;
 
+    let new_wish = WishDto {
+        wish_owner: usr_token.to_string(),
+        title: a_wish.title.to_string(),
+        descr: a_wish.descr.to_string(),
+        access_level:a_wish.to_string()
+    };
 
-    Ok(Status::NoContent)
+    diesel::update(wish)
+        .filter(id.eq(my_id))
+        .set(new_wish)
+        .execute(connection)
+        .expect("Error updating posts");
+
+    Template::render("wish_edit", context! {})
 }
-*/
+ */
+
+ 
+
+
+
+
+#[get("/friendships")]
+pub fn get_friendships(usr_session: UserSession) -> Template {
+    use self::models::Friendship;
+    use self::schema::friendship::user1;
+
+    let connection = &mut establish_connection_pg();
+
+    let usr_token = &usr_session.usr_token;
+
+    let results = self::schema::friendship::dsl::friendship
+        .filter(user1.eq(usr_token))
+        .or_filter(user2.eq(usr_token))
+        .load::<Friendship>(connection)
+        .expect("Error loading friendships");
+
+    let requests = self::schema::friendship::dsl::friendship
+        .filter((user2.eq(usr_token)).and(friend_status.eq("pending")))
+        .load::<Friendship>(connection)
+        .expect("Error loading friendships");
+
+    Template::render("friendships", context! {friendships: &results, requests: &requests})
+}
+
+#[post("/post_friendship", format="form", data="<a_friendship>")]
+pub fn create_friendship_request(a_friendship: Form<FriendshipDto>, usr_session: UserSession) -> Template {
+    use self::models::User;
+    use crate::schema::users::user_id;
+    use self::models::Friendship;
+    use self::schema::friendship::dsl::friendship;
+
+    let connection = &mut establish_connection_pg();
+
+    let usr_token = usr_session.usr_token;
+
+    // checks to see if requested user exists
+    let requested_user = self::schema::users::dsl::users
+        .filter(user_id.eq(a_friendship.user2.to_string()))
+        .load::<User>(connection)
+        .expect("Error retrieving user");
+
+    if requested_user.is_empty() {
+        Template::render("friendships", context! {})
+    } else  {
+        let new_friendship = FriendshipDto {
+            user1: usr_token.to_string(),
+            user2: a_friendship.user2.to_string(),
+            friend_status: a_friendship.friend_status.to_string()
+        };
+
+        diesel::insert_into(friendship)
+            .values(new_friendship)
+            .execute(connection)
+            .expect("Friendship failed");
+
+        let results = self::schema::friendship::dsl::friendship
+            .filter(user1.eq(usr_token))
+            .load::<Friendship>(connection)
+            .expect("Error loading friendships");
+    
+        Template::render("friendships", context! {friendships: &results})
+    }
+}
+
+#[post("/change_friendship", format="form", data="<a_friendship>")]
+pub fn change_friendship_status(a_friendship: Form<FriendshipDto>, usr_session: UserSession) -> Template {
+    use self::schema::friendship::dsl::*;
+
+    let connection = &mut establish_connection_pg();
+
+    diesel::update(friendship)
+        .filter((user1.eq(a_friendship.user1.to_string())).and(user2.eq(a_friendship.user2.to_string()))) //matches to friendship in table
+        .set(friend_status.eq(&a_friendship.friend_status))
+        .execute(connection)
+        .expect("Error updating status");
+
+    get_friendships(usr_session)
+}

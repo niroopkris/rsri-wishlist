@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist Friendships</title>
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            table {
+                border-collapse: collapse;
+                width: 80%;
+                margin-top: 20px;
+            }
+
+            th, td {
+                text-align: left;
+                padding: 8px;
+            }
+
+            tr:nth-child(even){background-color: #f2f2f2}
+
+            th {
+                background-color: #3a62cf;
+                color: white;
+            }
+
+            .form {
+                margin-top: 40px;
+                justify-self: center ;
+                width: 35%;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                align-self: flex-start;
+                margin-left: 130px;
+            }
+
+            .input {
+                height: 20px;
+            }
+
+            .dropdown {
+                width: 75px;
+                height: 35px;
+            }
+            .inputs {
+                width: 60%;
+                display: flex;
+                justify-content: space-around;
+            }
+            .user {
+                margin-left: auto;
+                width: 11%;
+                display: flex;
+                justify-content: space-around;
+            }
+            .buttons {
+                display: flex;
+                width: 20%;
+                justify-content: space-around;
+                margin-top: 50px;
+            }
+    </style>
+</head>
+<body>
+    <div class="user">
+        <p>Current User: </p><p id="userId"></p>
+    </div>
+    <form action="/post_friendship" method="post" class="form">
+        <h4><b>Create a Friendship: </b></h4>
+        <input type="text" name="user2" placeholder="Enter other user id" class="input"/>
+        <input type="hidden" name="friend_status" value="pending"/>
+        <input type="hidden" name="user1" id="user_one" value=""/>
+        <input type="submit" value="request" />
+    </form>
+
+    <h2>Friends</h2>
+    <table>
+        {{#each friendships}} 
+        <tr><th>User 1</th><th>User 2</th><th>Status</th></tr>
+        <div>
+            <tr>
+                <td>User 1: {{ this.user1 }}</td>
+                <td>User 2: {{ this.user2 }}</td>
+                <td>Status: {{ this.friend_status }}</td>
+            </tr>
+        </div>
+        {{else}}
+        <p>No friendships made</p>
+        {{/each}}
+    </table>
+
+    <h2>Friend Requests</h2>    
+    <table>
+        {{#each requests}}
+        <tr><th>User 1</th><th>User 2</th><th>Status</th><th>Action</th></tr> 
+        <div>
+            <tr>
+                <td>{{ this.user1 }}</td>
+                <td>{{ this.user2 }}</td>
+                <td>{{ this.friend_status }}</td>
+                <td>
+                    <form action="/change_friendship" method="post">
+                        <select name="friend_status" id="">
+                            <option value="Accepted">Accept</option>
+                            <option value="Rejected">Reject</option>
+                        </select>
+                        <input type="hidden" name="user1" value={{ this.user1 }}>
+                        <input type="hidden" name="user2" value={{ this.user2 }}>
+                        <input type="submit" value="confirm">
+                    </form>
+                </td>
+            </tr>
+        </div>
+        {{else}}
+        <p>No friendship requests</p>
+        {{/each}}
+    </table>
+    <div class="buttons">
+        <form method="post" action="/logout"><input type="submit" value="Sign Out"/></form>
+        <form method="get" action="/"><input type="submit" value="Wishes"/></form>
+    </div>
+</body>
+<script>
+    let id = document.getElementById("userId");
+    let userOne = document.getElementById("user1")
+    let cookie = document.cookie;
+
+    let list = cookie.split("=") // gets user id
+    
+    id.innerHTML = list[1]
+    userOne.value = list[1]
+</script>
+</html>

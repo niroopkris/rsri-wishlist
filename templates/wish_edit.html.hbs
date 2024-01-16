@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Wish</title>
+    <head>
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            table {
+                border-collapse: collapse;
+                width: 90%;
+                margin-top: 15px;
+            }
+
+            th, td {
+                text-align: left;
+                padding: 12px;
+            }
+
+            tr:nth-child(even){background-color: #f2f2f2}
+
+            th {
+                background-color: #3a62cf;
+                color: white;
+            }
+
+            .form {
+                margin-top: 20px;
+                justify-self: center ;
+                width: 50%;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                align-self: flex-start;
+                margin-left: 40px;
+            }
+
+            .input {
+                height: 30px;
+            }
+
+            .dropdown {
+                width: 75px;
+                height: 35px;
+            }
+            .inputs {
+                width: 60%;
+                display: flex;
+                justify-content: space-around;
+            }
+            .user {
+                margin-left: auto;
+                width: 11%;
+                display: flex;
+                justify-content: space-around;
+            }
+            h2 {
+                margin-top: 50px;
+            }
+            .buttons {
+                display: flex;
+                width: 20%;
+                justify-content: space-around;
+                margin-top: 50px;
+            }
+        </style>
+        <meta charset="utf-8">
+    </head>
+</head>
+<body>
+    <div class="user">
+        <p>Current User: </p><p id="userId"></p>
+    </div>
+    <form action="/edit/{{wish.id}}" method="post" class="form">
+        <h3>Edit your wish:</h3>
+        <div class="inputs">
+            <input type="text" name="title" placeholder="Enter a wish title"/>
+            <input type="text" name="descr" placeholder="Enter a description"/>
+            <input type="hidden" name="wish_owner" id="wish_owner" value = "${wish_owner}"/>
+            <input type="hidden" name="user_id" id="user_id" value = "${user_id}"/>
+            <select name="access_level" class="input dropdown">
+                <option value="private">private</option>
+                <option value="public">public</option>
+                <option value="friends">friends</option>
+            </select>
+            <input type="submit" value="Edit Wish">
+        </div>
+    </form>
+    <div class="buttons">
+        <form method="post" action="/logout"><input type="submit" value="Sign Out"/></form>
+        <form method="get" action="/friendships"><input type="submit" value="Friendships"/></form>
+    </div>
+</body>
+<script>
+    let id = document.getElementById("userId");
+    let cookie = document.cookie;
+
+    let list = cookie.split("=")
+    id.innerHTML = list[1];
+</script>
+</html>

@@ -8,14 +8,23 @@
     <title>Wishlist</title>
     <head>
         <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
             table {
                 border-collapse: collapse;
-                width: 100%;
+                width: 90%;
+                margin-top: 15px;
             }
 
             th, td {
                 text-align: left;
-                padding: 8px;
+                padding: 12px;
             }
 
             tr:nth-child(even){background-color: #f2f2f2}
@@ -24,47 +33,119 @@
                 background-color: #3a62cf;
                 color: white;
             }
+
+            .form {
+                margin-top: 20px;
+                justify-self: center ;
+                width: 50%;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                align-self: flex-start;
+                margin-left: 40px;
+            }
+
+            .input {
+                height: 30px;
+            }
+
+            .dropdown {
+                width: 75px;
+                height: 35px;
+            }
+            .inputs {
+                width: 60%;
+                display: flex;
+                justify-content: space-around;
+            }
+            .user {
+                margin-left: auto;
+                width: 11%;
+                display: flex;
+                justify-content: space-around;
+            }
+            h2 {
+                margin-top: 50px;
+            }
+            .buttons {
+                display: flex;
+                width: 20%;
+                justify-content: space-around;
+                margin-top: 50px;
+            }
         </style>
         <meta charset="utf-8">
     </head>
 </head>
 <body>
-    <form action="/create_wish" method="post">
-        <input type="text" name="title" placeholder="Enter a wish title"/>
-        <input type="text" name="descr" placeholder="Enter a description"/>
-        <input type="hidden" name="wish_owner" id="wish_owner" value = "${wish_owner}"/>
-        <select name="access_level">
-            <option value="public">public</option>
-            <option value="friends">friends</option>
-        </select>
-        <input type="submit" value="Create wish">
+    <div class="user">
+        <p>Current User: </p><p id="userId"></p>
+    </div>
+    <form action="/create_wish" method="post" class="form">
+        <h3>Create a new wish:</h3>
+        <div class="inputs">
+            <input type="text" name="title" placeholder="Enter a wish title"/>
+            <input type="text" name="descr" placeholder="Enter a description"/>
+            <input type="hidden" name="wish_owner" id="wish_owner" value = "${wish_owner}"/>
+            <input type="hidden" name="user_id" id="user_id" value = "${user_id}"/>
+            <select name="access_level" class="input dropdown">
+                <option value="private">private</option>
+                <option value="public">public</option>
+                <option value="friends">friends</option>
+            </select>
+            <input type="submit" value="Create Wish">
+        </div>
     </form>
-    <section id="wishes">
-        <h1>Your Wishlist</h1>
-        <ul>
-        <table>
-           <tr><th>Title</th><th>Description</th><th>Access Level</th><th>Delete</th><th>Edit</th></tr> 
-                {{#each wishes}}
+    <h2>My Wishlist</h2>
+    <table>
+        <tr><th>Wish</th><th>Description</th><th>Access Level</th><th>Delete</th><th>Edit</th></tr> 
+        {{#each wishes}}
+        <div>
+            <tr>
+            <td>{{ this.title }}</td>
+            <td>{{ this.descr }}</td>
+            <td>{{ this.access_level }}</td>
+            <form action="/delete/{{this.id}}" method="post">
+                <td> <button type="submit">delete</button></td>
+            </form>
+            <action="/edit/{{this.id}}" method="post">
+                <td> <button type="submit">edit</button></td>
+            </form>
+            </tr>
+        </div>
+        {{else}}
+        <p> No wishes made</p>
+        {{/each}}
+    </table>
 
-                <div id="todo">
-                    <tr>
-                    <td>{{ this.title }}</td>
-                    <td>{{ this.descr }}</td>
-                    <td>{{ this.access_level }}</td>
-                    <form action="/delete/{{this.id}}" method="post">
-                       <td> <button type="submit">delete</button></td>
-                    </form>
-                    <form action="/update/{{this.id}}" method="post">
-                        <td> <button type="submit">update</button></td>
-                    </form>
-                    </tr>
-                </div>
-                {{else}}
-                <p> No posts yet</p>
-                {{/each}}
-            </table>
-        </ul>
+    <h2>Friend/Public Wishes</h2>
+    <table>
+        <tr><th>Wish</th><th>Description</th><th>Access Level</th><th>User Id</th>
+        {{#each friend_wishes}}
+        <div>
+            <tr>
+            <td>{{ this.title }}</td>
+            <td>{{ this.descr }}</td>
+            <td>{{ this.access_level }}</td>
+            <td>{{ this.wish_owner }}</td>
+            </tr>
+        </div>
+        {{else}}
+        <p> No wishes made</p>
+        {{/each}}
+    </table>
 
-    </section>
+
+    <div class="buttons">
+        <form method="post" action="/logout"><input type="submit" value="Sign Out"/></form>
+        <form method="get" action="/friendships"><input type="submit" value="Friendships"/></form>
+    </div>
 </body>
+<script>
+    let id = document.getElementById("userId");
+    let cookie = document.cookie;
+
+    let list = cookie.split("=")
+    id.innerHTML = list[1];
+</script>
 </html>
