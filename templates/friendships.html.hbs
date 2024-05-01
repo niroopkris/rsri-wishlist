@@ -77,7 +77,7 @@
         <h4><b>Create a Friendship: </b></h4>
         <input type="text" name="user2" placeholder="Enter other user id" class="input"/>
         <input type="hidden" name="friend_status" value="pending"/>
-        <input type="hidden" name="user1" id="user_one" value=""/>
+        <input type="hidden" name="user1" id="user1" value=""/>
         <input type="submit" value="request" />
     </form>
 
@@ -87,9 +87,9 @@
         <tr><th>User 1</th><th>User 2</th><th>Status</th></tr>
         <div>
             <tr>
-                <td>User 1: {{ this.user1 }}</td>
-                <td>User 2: {{ this.user2 }}</td>
-                <td>Status: {{ this.friend_status }}</td>
+                <td>{{ this.user1 }}</td>
+                <td>{{ this.user2 }}</td>
+                <td>{{ this.friend_status }}</td>
             </tr>
         </div>
         {{else}}
