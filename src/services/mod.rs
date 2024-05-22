@@ -1,7 +1,9 @@
 extern crate diesel;
 extern crate rocket;
+use crate::services::diesel::Connection;
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
+use diesel::{RunQueryDsl, connection};
+//use diesel::prelude::*;
 use dotenvy::dotenv;
 use rocket::response::{status::Created, Debug};
 use rocket::serde::{json::Json, Deserialize, Serialize};
@@ -9,7 +11,7 @@ use rocket::{get, post, FromForm};
 use crate::models::{User, UserDto, Wish, WishDto, Friendship, FriendshipDto, UserSession};
 use crate::schema::friendship::{user1, user2, friend_status};
 use crate::schema::wish::{wish_owner, access_level};
-use crate::schema::users::{user_id};
+use crate::schema::users::user_id;
 
 use crate::schema;
 use rocket::http::Status;
@@ -22,9 +24,9 @@ use rocket::{Request, Response};
 use rocket::request::{FromRequest, Outcome};
 use rocket::http::{CookieJar, Cookie};
 
-use rdiesel::{select_list};
+use rdiesel::{select_list, update_where, Expr, Field};
 
-pub fn establish_connection_pg() -> PgConnection {
+pub fn establish_connection_pg() -> PgConnection {    
     dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     PgConnection::establish(&database_url)
@@ -52,6 +54,7 @@ pub fn create_user(jar: &CookieJar<'_>, user: Form<UserDto>) -> Template {
         passwd: user.passwd.to_string(),
     };
 
+    //add to database, wait for implementation in rdiesel
     diesel::insert_into(users)
         .values(new_user)
         .execute(connection)
@@ -171,7 +174,6 @@ impl rdiesel::Expr<Friendship, String> for schema::friendship::user2 {}
 
 impl rdiesel::Expr<Wish, String> for schema::wish::access_level {}
 
-
 #[get("/")]
 pub fn get_wishes(usr_session: UserSession) -> Template {
     //use diesel::dsl::not;
@@ -262,40 +264,78 @@ pub fn delete_wish(usr_session: UserSession, my_id: i32) -> Template{
 
     let usr_token = &usr_session.usr_token;
 
+    //update query to rdiesel
+    /* 
     let deleted = diesel::delete(wish.filter(id.eq(my_id)))
         .execute(connection)
         .expect("Error deleting posts");
-    
+    */
     get_wishes(usr_session)
 }
 
-/* 
-#[post("/edit/<my_id>", format = "form", data = "<a_wish>")]
-pub fn edit_wish(a_wish: Form<WishDto>, usr_session: UserSession, my_id: i32) -> Template {
+impl rdiesel::Expr<Wish, i32> for schema::wish::id {}
+impl rdiesel::Expr<Wish, String> for schema::wish::title {}
+impl rdiesel::Expr<Wish, String> for schema::wish::descr {}
+
+impl rdiesel::Field<Wish, i32> for schema::wish::id {}
+impl rdiesel::Field<Wish, String> for schema::wish::wish_owner {}
+impl rdiesel::Field<Wish, String> for schema::wish::title {}
+impl rdiesel::Field<Wish, String> for schema::wish::descr {}
+impl rdiesel::Field<Wish, String> for schema::wish::access_level {}
+
+#[get("/edit/redirect/<wish_id>")]
+pub fn edit_wish_redirect(usr_session: UserSession, wish_id: i32) -> Template {
+    use self::schema::wish::dsl::*;
+
+    let connection: &mut PgConnection = &mut establish_connection_pg();
+
+
+    let wish_q1 = id.eq(wish_id);
+    let find_wish = rdiesel::select_list(connection, wish_q1);
+
+    Template::render("wish_edit", context! {wishes: &find_wish.expect("ERROR EDITING WISH")})
+}
+
+#[post("/edit/<wish_id>", format = "form", data = "<a_wish>")]
+pub fn edit_wish(a_wish: Form<WishDto>, usr_session: UserSession, wish_id: i32) -> Template {
     use self::schema::wish::dsl::*;
     use crate::models::WishDto;
-    use self::models::Wish;
+    use crate::models::Wish;
 
-    let connection = &mut establish_connection_pg();
+    let connection: &mut PgConnection = &mut establish_connection_pg();
 
-    let usr_token = &usr_session.usr_token;
+    let usr_token: &String = &usr_session.usr_token;
 
+    /* 
     let new_wish = WishDto {
         wish_owner: usr_token.to_string(),
         title: a_wish.title.to_string(),
         descr: a_wish.descr.to_string(),
-        access_level:a_wish.to_string()
+        access_level: a_wish.access_level.to_string()
     };
+    */
 
+    let wish_q1 = id.eq(wish_id);
+    let wish_q2 = id.eq(wish_id);
+    let wish_q3 = id.eq(wish_id);
+    let wish_q4 = id.eq(wish_id);
+
+    rdiesel::update_where(connection, wish_q1, wish_owner.assign(usr_token.to_string()));
+    rdiesel::update_where(connection, wish_q2, title.assign(a_wish.title.to_string()));
+    rdiesel::update_where(connection, wish_q3, descr.assign(a_wish.descr.to_string()));
+    rdiesel::update_where(connection, wish_q4, access_level.assign(a_wish.access_level.to_string()));
+
+    /* 
     diesel::update(wish)
-        .filter(id.eq(my_id))
+        .filter(id.eq(wish_id))
         .set(new_wish)
         .execute(connection)
         .expect("Error updating posts");
+    */
 
-    Template::render("wish_edit", context! {})
+    get_wishes(usr_session)
 }
- */
+ 
 
 
 #[get("/friendships")]
@@ -316,7 +356,7 @@ pub fn get_friendships(usr_session: UserSession) -> Template {
     let requests_q3 = rdiesel::Expr::and(requests_q1, requests_q2);
     let requests = rdiesel::select_list(connection, requests_q3);
     
-    Template::render("friendships", context! {friendships: &resultsexpect("ERROR LOADING FRIENDSHIPS"),
+    Template::render("friendships", context! {friendships: &results.expect("ERROR LOADING FRIENDSHIPS"),
         requests: &requests.expect("ERROR LOADING REQUESTS")})
 
     /* 
@@ -400,17 +440,26 @@ pub fn create_friendship_request(a_friendship: Form<FriendshipDto>, usr_session:
     */
 }
 
+
+impl rdiesel::Field<Friendship, String> for schema::friendship::user1 {}
+impl rdiesel::Field<Friendship, String> for schema::friendship::user2 {}
+impl rdiesel::Field<Friendship, String> for schema::friendship::friend_status {}
+
 #[post("/change_friendship", format="form", data="<a_friendship>")]
 pub fn change_friendship_status(a_friendship: Form<FriendshipDto>, usr_session: UserSession) -> Template {
     use self::schema::friendship::dsl::*;
 
     let connection = &mut establish_connection_pg();
 
+    let q1 = user1.eq(a_friendship.user1.to_string());
+    let q2 = user2.eq(a_friendship.user2.to_string());
+    let q3 = q1.and(q2);
+    /* 
     diesel::update(friendship)
         .filter((user1.eq(a_friendship.user1.to_string())).and(user2.eq(a_friendship.user2.to_string()))) //matches to friendship in table
         .set(friend_status.eq(&a_friendship.friend_status))
         .execute(connection)
         .expect("Error updating status");
-
+    */
     get_friendships(usr_session)
 }

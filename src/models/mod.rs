@@ -1,6 +1,7 @@
 use std::error::Error;
 use crate::schema::{users, wish, friendship};
 
+use diesel::associations::HasTable;
 use diesel::prelude::*;
 use serde::{Serialize, Deserialize};
 use rocket::{get, post, FromForm};
@@ -12,6 +13,13 @@ use rocket::http::Status;
 use rocket::http::Cookie;
 
 
+impl HasTable for User {
+    type Table = crate::schema::users::table;
+
+    fn table() -> Self::Table {
+        crate::schema::users::table
+    }
+}
 //create User object
 #[derive(Queryable, Insertable, Serialize, Deserialize)]
 #[diesel(table_name = users)]
@@ -29,6 +37,13 @@ pub struct UserDto {
     pub passwd: String,
 }
 
+impl HasTable for Wish {
+    type Table = crate::schema::wish::table;
+
+    fn table() -> Self::Table {
+        crate::schema::wish::table
+    }
+}
 #[derive(Queryable, Insertable, Serialize, Deserialize, Associations)]
 #[diesel(belongs_to(User, foreign_key = wish_owner))]
 #[diesel(table_name = wish)]
@@ -51,6 +66,13 @@ pub struct WishDto {
 }
 
 
+impl HasTable for Friendship {
+    type Table = crate::schema::friendship::table;
+
+    fn table() -> Self::Table {
+        crate::schema::friendship::table
+    }
+}
 #[derive(Queryable, Insertable, Serialize, Deserialize, FromForm)]
 #[diesel(table_name = friendship)]
 pub struct Friendship {

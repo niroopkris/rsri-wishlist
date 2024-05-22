@@ -81,31 +81,30 @@
     <div class="user">
         <p>Current User: </p><p id="userId"></p>
     </div>
-    <form action="/edit/{{wish.id}}" method="post" class="form">
-        <h3>Edit your wish:</h3>
-        <div class="inputs">
-            <input type="text" name="title" placeholder="Enter a wish title"/>
-            <input type="text" name="descr" placeholder="Enter a description"/>
-            <input type="hidden" name="wish_owner" id="wish_owner" value = "${wish_owner}"/>
-            <input type="hidden" name="user_id" id="user_id" value = "${user_id}"/>
-            <select name="access_level" class="input dropdown">
-                <option value="private">private</option>
-                <option value="public">public</option>
-                <option value="friends">friends</option>
-            </select>
-            <input type="submit" value="Edit Wish">
-        </div>
-    </form>
+    <div>
+    {{#each wishes}}
+        <form action="/edit/{{this.id}}" method="post" class="form">
+            <h3>Edit your wish:</h3>
+            <div class="inputs">
+                <input type="text" name="title" placeholder="Enter a wish title"/>
+                <input type="text" name="descr" placeholder="Enter a description"/>
+                <input type="hidden" name="wish_owner" id="wish_owner" value = "${wish_owner}"/>
+                <input type="hidden" name="user_id" id="user_id" value = "${user_id}"/>
+                <select name="access_level" class="input dropdown">
+                    <option value="private">private</option>
+                    <option value="public">public</option>
+                    <option value="friends">friends</option>
+                </select>
+                <input type="submit" value="Edit Wish">
+            </div>
+        </form>
+    </div>
+    {{else}}
+        <p> No wishes made</p>
+    {{/each}}
     <div class="buttons">
         <form method="post" action="/logout"><input type="submit" value="Sign Out"/></form>
         <form method="get" action="/friendships"><input type="submit" value="Friendships"/></form>
     </div>
 </body>
-<script>
-    let id = document.getElementById("userId");
-    let cookie = document.cookie;
-
-    let list = cookie.split("=")
-    id.innerHTML = list[1];
-</script>
 </html>
