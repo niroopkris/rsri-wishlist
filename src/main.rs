@@ -13,9 +13,9 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![services::home])
-        .mount("/", routes![services::create_user])
-        .mount("/", routes![services::login])
-        .mount("/", routes![services::logout])
+        .mount("/", routes![services::auth::create_user])
+        .mount("/", routes![services::auth::login])
+        .mount("/", routes![services::auth::logout])
         .mount("/", routes![services::create_wish])
         .mount("/", routes![services::delete_wish])
         .mount("/", routes![services::edit_wish_redirect])
