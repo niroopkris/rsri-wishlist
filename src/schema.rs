@@ -3,15 +3,15 @@
 diesel::table! {
     friendship (id) {
         id -> Int4,
-        user1 -> Varchar,
-        user2 -> Varchar,
-        friend_status -> Varchar,
+        user1 -> Int4,
+        user2 -> Int4,
+        friend_status -> Int4,
     }
 }
 
 diesel::table! {
     users (user_id) {
-        user_id -> Varchar,
+        user_id -> Int4,
         user_name -> Varchar,
         passwd -> Varchar,
     }
@@ -20,10 +20,10 @@ diesel::table! {
 diesel::table! {
     wish (id) {
         id -> Int4,
-        wish_owner -> Varchar,
+        wish_owner -> Int4,
         title -> Varchar,
         descr -> Text,
-        access_level -> Varchar,
+        access_level -> Int4,
     }
 }
 

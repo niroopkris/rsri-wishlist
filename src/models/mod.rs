@@ -8,14 +8,12 @@ use std::env;
 use diesel::{associations::HasTable, associations::Identifiable, Insertable, Queryable, Selectable};
 use diesel::prelude::*;
 use serde::{Serialize, Deserialize};
-use rocket::{get, post, self, http::Status, http::Cookie, fairing::AdHoc, Request, Response, routes, FromForm};
-use rocket::request::{FromRequest, Outcome};
+use rocket::{self, http::Status, Request, routes, FromForm};
+use rocket::request::{self, FromRequest, Outcome};
 
 use crate::models;
 
 use rdiesel::ContextImpl;
-use flux_rs::*;
-
 
 impl HasTable for User {
     type Table = crate::schema::users::table;
@@ -30,7 +28,7 @@ impl HasTable for User {
 #[derive(Queryable, Insertable, Serialize, Deserialize, Clone)]
 #[diesel(table_name = users)]
 pub struct User {
-    pub user_id: String,
+    pub user_id: i32,
     pub user_name: String,
     pub passwd: String,
 }
@@ -38,7 +36,6 @@ pub struct User {
 #[derive(Queryable, Insertable, Serialize, Deserialize, FromForm)]
 #[diesel(table_name = users)]
 pub struct UserDto {
-    pub user_id: String,
     pub user_name: String,
     pub passwd: String,
 }
@@ -55,10 +52,10 @@ impl HasTable for Wish {
 #[diesel(table_name = wish)]
 pub struct Wish {
     pub id: i32,
-    pub wish_owner: String,
+    pub wish_owner: i32,
     pub title: String,
     pub descr: String,
-    pub access_level: String,
+    pub access_level: i32,
 }
 
 impl HasTable for WishDto {
@@ -73,10 +70,10 @@ impl HasTable for WishDto {
 #[diesel(belongs_to(User, foreign_key = wish_owner))]
 #[diesel(table_name = wish)]
 pub struct WishDto {
-    pub wish_owner: String,
+    pub wish_owner: i32,
     pub title: String,
     pub descr: String,
-    pub access_level: String,
+    pub access_level: i32,
 }
 
 
@@ -92,9 +89,9 @@ impl HasTable for Friendship {
 #[diesel(table_name = friendship)]
 pub struct Friendship {
     pub id: i32,
-    pub user1: String,
-    pub user2: String,
-    pub friend_status: String,
+    pub user1: i32,
+    pub user2: i32,
+    pub friend_status: i32,
 }
 
 impl HasTable for FriendshipDto {
@@ -108,9 +105,9 @@ impl HasTable for FriendshipDto {
 #[derive(Queryable, Insertable, Serialize, Deserialize, FromForm)]
 #[diesel(table_name = friendship)]
 pub struct FriendshipDto {
-    pub user1: String,
-    pub user2: String,
-    pub friend_status: String,
+    pub user1: i32,
+    pub user2: i32,
+    pub friend_status: i32,
 }
 
 pub struct Session {
@@ -140,13 +137,12 @@ impl ContextImpl for Session {
     }
 }
 
-#[flux_rs::ignore]
 const _: () = {
     #[rocket::async_trait]
     impl<'r> FromRequest<'r> for Session {
         type Error = ();
 
-        async fn from_request(req: &'r Request<'_>) -> Outcome<Session, Self::Error> {
+        async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
             use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
             use crate::schema::users;
 
@@ -155,7 +151,7 @@ const _: () = {
             let Some(user_id) = req
                 .cookies()
                 .get("user_id")
-                .and_then(|it| it.value().parse::<String>().ok())
+                .and_then(|it| it.value().parse::<i32>().ok())
             else {
                 return Outcome::Error((Status::Unauthorized, ()))
             };

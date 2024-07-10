@@ -25,14 +25,10 @@ use rocket::{Request, Response};
 use rocket::request::{FromRequest, Outcome};
 use rocket::http::{CookieJar, Cookie};
 
-use flux_rs::*;
-use rdiesel::Expr;
-//use rdiesel::{select_list, update_where, Expr, Field};
+use rdiesel::{Expr, Field};
 
 //TEMPORARY PLACE: needs to be moved somewhere else and used like: use crate::PUBLIC
-#[constant]
 pub const PUBLIC: i32 = 0;
-#[constant]
 pub const FRIENDS: i32 = 1;
 
 //move this from here to auth.rs???
@@ -43,39 +39,49 @@ pub fn establish_connection_pg() -> PgConnection {
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
+type Result<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
+
 //User home page
 #[get("/home")]
 pub fn home() -> Template {
     Template::render("users",  context!{})
 }
 
-impl rdiesel::Expr<Wish, String> for schema::wish::wish_owner {}
+impl rdiesel::Expr<Wish, i32> for schema::wish::wish_owner {}
 
 //CRUD functions for a User's posts
 #[post("/create_wish", format = "form", data = "<a_wish>")]
 pub fn create_wish(a_wish: Form<WishDto>, sess: Session) -> Template {
     //use schema::wish::dsl::*;
+    let sess_backup = Session {
+        conn: establish_connection_pg(),
+        user: sess.user.clone(),
+    };
     
     let mut cx = sess.into_context();
 
     let auth_user = cx.auth_user();
 
     let new_wish = WishDto {
-        wish_owner: auth_user.user_id.to_string(),
+        wish_owner: auth_user.user_id,
         title: a_wish.title.to_string(),
         descr: a_wish.descr.to_string(),
-        access_level: a_wish.access_level.to_string(),
+        access_level: a_wish.access_level,
     };
 
     let _ = cx.insert(new_wish);
 
+    get_wishes(sess_backup)
+
+    /* NEWER CODE - no need
     let results_q1 = wish::wish_owner.eq(auth_user.user_id.to_string());
-    //let results = rdiesel::select_list(connection, results_q1);
+        //let results = rdiesel::select_list(connection, results_q1);
     let results = cx.select_list(results_q1);
 
     Template::render("wishes", context! {wishes: &results.expect("ERROR LOADING WISHES")})
+    */
 
-    /* 
+    /* OLD CODE
     let connection = &mut establish_connection_pg();
 
     let usr_token = &usrSession.usr_token;  //user id taken from our usrSession parameter (a cookie thing)
@@ -107,11 +113,11 @@ pub fn create_wish(a_wish: Form<WishDto>, sess: Session) -> Template {
 }
 
 
-impl rdiesel::Expr<Friendship, String> for schema::friendship::friend_status {}
-impl rdiesel::Expr<Friendship, String> for schema::friendship::user1 {}
-impl rdiesel::Expr<Friendship, String> for schema::friendship::user2 {}
+impl rdiesel::Expr<Friendship, i32> for schema::friendship::friend_status {}
+impl rdiesel::Expr<Friendship, i32> for schema::friendship::user1 {}
+impl rdiesel::Expr<Friendship, i32> for schema::friendship::user2 {}
 
-impl rdiesel::Expr<Wish, String> for schema::wish::access_level {}
+impl rdiesel::Expr<Wish, i32> for schema::wish::access_level {}
 
 #[get("/")]
 pub fn get_wishes(sess: Session) -> Template {
@@ -124,20 +130,32 @@ pub fn get_wishes(sess: Session) -> Template {
 
     let id = auth_user.user_id;
 
+    //get friendship ids
+    let friendships = cx.select_list(
+        friendship::user1.eq(auth_user.user_id).or(
+            friendship::user2.eq(auth_user.user_id)
+        )
+    );
+
+    let mut friend_ids:Vec<i32> = Vec::new();
+
+    for i in friendships.expect("ERROR RETRIEVING FRIENDSHIPS") {
+        friend_ids.push(i.user1);
+        friend_ids.push(i.user2);
+    } 
+
     //retrive your personal wishes and friend/public wishes
     //to allow default .neq() to work, can move this func before create_wish and just implement Expr for wish_owner after this func 
     let wishes = cx.select_list(wish::wish_owner.eq(id));
     let other_wishes = cx.select_list(
         //wish::wish_owner.neq(id).and(
-            (friendship::user1.eq(id).or(friendship::user2.eq(id))).and(
+            (wish::wish_owner.eq_any(friend_ids)).and(
                 wish::access_level
                     .eq(PUBLIC)
                     .or(wish::access_level.eq(FRIENDS)),
             ),
         //),
     );
-
-    
 
     // unwrap verification is slower
     // let wishes = wishes.unwrap();
@@ -156,6 +174,7 @@ pub fn get_wishes(sess: Session) -> Template {
     */
 
     Template::render("wishes", context! {wishes: &wishes, other_wishes: &other_wishes})
+
 
     /* OLD RDIESEL CODE 
     let connection = &mut establish_connection_pg();
@@ -263,10 +282,10 @@ impl rdiesel::Expr<Wish, String> for schema::wish::title {}
 impl rdiesel::Expr<Wish, String> for schema::wish::descr {}
 
 impl rdiesel::Field<Wish, i32, User> for schema::wish::id {}
-impl rdiesel::Field<Wish, String, User> for schema::wish::wish_owner {}
+impl rdiesel::Field<Wish, i32, User> for schema::wish::wish_owner {}
 impl rdiesel::Field<Wish, String, User> for schema::wish::title {}
 impl rdiesel::Field<Wish, String, User> for schema::wish::descr {}
-impl rdiesel::Field<Wish, String, User> for schema::wish::access_level {}
+impl rdiesel::Field<Wish, i32, User> for schema::wish::access_level {}
 
 #[get("/edit/redirect/<wish_id>")]
 pub fn edit_wish_redirect(sess: Session, wish_id: i32) -> Template {
@@ -288,18 +307,22 @@ pub fn edit_wish_redirect(sess: Session, wish_id: i32) -> Template {
 pub fn edit_wish(a_wish: Form<WishDto>, sess: Session, wish_id: i32) -> Template {
     //use crate::models::WishDto;
     //use crate::models::Wish;
+    let sess_backup = Session {
+        conn: establish_connection_pg(),
+        user: sess.user.clone(),
+    };
 
     let mut cx = sess.into_context();
 
     let auth_user = cx.auth_user();
 
-    let _ = cx.update_where(wish::id.eq(wish_id), wish::wish_owner.assign(auth_user.user_id.to_string()));
+    let _ = cx.update_where(wish::id.eq(wish_id), wish::wish_owner.assign(auth_user.user_id));
     let _ = cx.update_where(wish::id.eq(wish_id), wish::title.assign(a_wish.title.to_string()));
     let _ = cx.update_where(wish::id.eq(wish_id), wish::descr.assign(a_wish.descr.to_string()));
-    let _ = cx.update_where(wish::id.eq(wish_id), wish::access_level.assign(a_wish.access_level.to_string()));
+    let _ = cx.update_where(wish::id.eq(wish_id), wish::access_level.assign(a_wish.access_level));
 
 
-    get_wishes(sess)
+    get_wishes(sess_backup)
 
     /* OLD RDIESEL CODE
     let wish_q1 = id.eq(wish_id);
@@ -342,14 +365,14 @@ pub fn get_friendships(sess: Session) -> Template {
     let auth_user = cx.auth_user();
 
     let friendships = cx.select_list(
-        friendship::user1.eq(auth_user.user_id.to_string()).or(
-            friendship::user2.eq(auth_user.user_id.to_string())
+        friendship::user1.eq(auth_user.user_id).or(
+            friendship::user2.eq(auth_user.user_id)
         )
     );
 
     let requests = cx.select_list(
-        friendship::user2.eq(auth_user.user_id.to_string()).and(
-            friendship::friend_status.eq("pending".to_string())
+        friendship::user2.eq(auth_user.user_id).and(
+            friendship::friend_status.eq(0)                         //0 = pending, 1 = accepted
         )
     );
 
@@ -386,7 +409,7 @@ pub fn get_friendships(sess: Session) -> Template {
     */
 }
 
-impl rdiesel::Expr<User, String> for schema::users::user_id {}
+impl rdiesel::Expr<User, i32> for schema::users::user_id {}
 
 #[post("/post_friendship", format="form", data="<a_friendship>")]
 pub fn create_friendship_request(a_friendship: Form<FriendshipDto>, sess: Session) -> Template {
@@ -398,20 +421,20 @@ pub fn create_friendship_request(a_friendship: Form<FriendshipDto>, sess: Sessio
     let auth_user = cx.auth_user();
 
     //check if requested user exists
-    let requested_user = cx.select_first(auth_user.user_id.eq(a_friendship.user2.to_string()));
+    let requested_user = cx.select_first(users::user_id.eq(a_friendship.user2));
 
     if requested_user.expect("USER DOESN'T EXIST").is_none() {
         Template::render("friendships", context! {})
     } else {
         let new_friendship = FriendshipDto {
-            user1: auth_user.user_id.to_string(),
-            user2: a_friendship.user2.to_string(),
-            friend_status: a_friendship.friend_status.to_string()
+            user1: auth_user.user_id,
+            user2: a_friendship.user2,
+            friend_status: a_friendship.friend_status
         };
 
         let _ = cx.insert(new_friendship);
 
-        let results = cx.select_list(friendship::user1.eq(auth_user.user_id.to_string()));
+        let results = cx.select_list(friendship::user1.eq(auth_user.user_id));
 
         Template::render("friendships", context! {friendships: &results.expect("ERROR")})       
     }
@@ -448,23 +471,27 @@ pub fn create_friendship_request(a_friendship: Form<FriendshipDto>, sess: Sessio
 }
 
 
-impl rdiesel::Field<Friendship, String, User> for schema::friendship::user1 {}
-impl rdiesel::Field<Friendship, String, User> for schema::friendship::user2 {}
-impl rdiesel::Field<Friendship, String, User> for schema::friendship::friend_status {}
+impl rdiesel::Field<Friendship, i32, User> for schema::friendship::user1 {}
+impl rdiesel::Field<Friendship, i32, User> for schema::friendship::user2 {}
+impl rdiesel::Field<Friendship, i32, User> for schema::friendship::friend_status {}
 
 #[post("/change_friendship", format="form", data="<a_friendship>")]
 pub fn change_friendship_status(a_friendship: Form<FriendshipDto>, sess: Session) -> Template {
     //use self::schema::friendship::dsl::*;
+    let sess_backup = Session {
+        conn: establish_connection_pg(),
+        user: sess.user.clone(),
+    };
 
     let mut cx = sess.into_context();
 
     let auth_user = cx.auth_user();
 
-    let q1 = friendship::user1.eq(a_friendship.user1.to_string()).and(
-        friendship::user2.eq(a_friendship.user2.to_string())
+    let q1 = friendship::user1.eq(a_friendship.user1).and(
+        friendship::user2.eq(a_friendship.user2)
     );
 
-    let _ = cx.update_where(q1, friendship::friend_status.assign(a_friendship.friend_status.to_string()));
+    let _ = cx.update_where(q1, friendship::friend_status.assign(a_friendship.friend_status));
 
     /* 
     let q1 = user1.eq(a_friendship.user1.to_string());
@@ -478,5 +505,5 @@ pub fn change_friendship_status(a_friendship: Form<FriendshipDto>, sess: Session
         .expect("Error updating status");
     */
 
-    get_friendships(sess)
+    get_friendships(sess_backup)
 }
